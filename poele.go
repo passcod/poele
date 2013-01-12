@@ -3,6 +3,7 @@ package poele
 import (
 	"fmt"
 	"github.com/vmihailenco/redis"
+	"log"
 	"runtime"
 	"strings"
 	"time"
@@ -23,7 +24,7 @@ func New(rds *redis.Client, pfx string, proc func(string) interface{}) Poële {
 }
 
 func (p Poële) Serve() {
-	fmt.Printf(">>> Opening the kitchen with ‘%s’ as menu du jour.\n", p.prefix)
+	log.Printf(">>> Opening the kitchen with ‘%s’ as menu du jour.\n", p.prefix)
 	runtime.GOMAXPROCS(p.concurrency)
 	for i := 0; i < p.concurrency; i++ {
 		go p.doWork(i)
@@ -39,18 +40,18 @@ func (p Poële) giveWork() {
 	for {
 		item := p.rds.BRPopLPush(from, to, 0)
 		if err := item.Err(); err != nil {
-			fmt.Printf("!!! Redis: %s\n", err)
+			log.Printf("!!! Redis: %s\n", err)
 			continue
 		}
 
 		val := item.Val()
-		fmt.Printf(">>> Crèpes au bacon, order %s, coming up!\n", val)
+		log.Printf(">>> Crèpes au bacon, order %s, coming up!\n", val)
 		p.queue <- val
 	}
 }
 
 func (p Poële) doWork(id int) {
-	fmt.Printf(">>> Firing up gas Nº%d and getting a clean pan…\n", id)
+	log.Printf(">>> Firing up gas Nº%d and getting a clean pan…\n", id)
 
 	for {
 		item := <-p.queue
@@ -58,7 +59,7 @@ func (p Poële) doWork(id int) {
 			break
 		}
 
-		fmt.Printf("[%d] Cooking: %s\n", id, item)
+		log.Printf("[%d] Cooking: %s\n", id, item)
 		then := time.Now()
 
 		ret := p.process(item)
@@ -70,7 +71,7 @@ func (p Poële) doWork(id int) {
 
 		dur2 := uDuration(time.Since(then))
 
-		fmt.Printf("[%d] Done in (%s/%s): %v\n", id, dur1, dur2, ret)
+		log.Printf("[%d] Done in (%s/%s): %v\n", id, dur1, dur2, ret)
 	}
 }
 
